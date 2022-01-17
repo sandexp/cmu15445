@@ -42,7 +42,7 @@ TEST(StarterTest, SampleTest) {
 }
 
 /** Test that matrix initialization works as expected */
-TEST(StarterTest, DISABLED_InitializationTest) {
+TEST(StarterTest, InitializationTest) {
   auto matrix = std::make_unique<RowMatrix<int>>(2, 2);
 
   // Source contains too few elements
@@ -59,7 +59,6 @@ TEST(StarterTest, DISABLED_InitializationTest) {
   std::vector<int> source2(4);
   std::iota(source2.begin(), source2.end(), 0);
   EXPECT_NO_THROW(matrix->FillFrom(source2));
-
   for (int i = 0; i < matrix->GetRowCount(); i++) {
     for (int j = 0; j < matrix->GetColumnCount(); j++) {
       const int expected = (i * matrix->GetColumnCount()) + j;
@@ -68,7 +67,7 @@ TEST(StarterTest, DISABLED_InitializationTest) {
   }
 }
 
-TEST(StarterTest, DISABLED_ElementAccessTest) {
+TEST(StarterTest, ElementAccessTest) {
   auto matrix = std::make_unique<RowMatrix<int>>(2, 2);
 
   std::vector<int> source(4);
@@ -115,7 +114,7 @@ TEST(StarterTest, DISABLED_ElementAccessTest) {
 }
 
 /** Test that matrix addition works as expected */
-TEST(StarterTest, DISABLED_AdditionTest) {
+TEST(StarterTest, AdditionTest) {
   auto matrix0 = std::make_unique<RowMatrix<int>>(3, 3);
 
   const std::vector<int> source0{1, 4, 2, 5, 2, -1, 0, 3, 1};
@@ -126,6 +125,7 @@ TEST(StarterTest, DISABLED_AdditionTest) {
       EXPECT_EQ(source0[i * matrix0->GetColumnCount() + j], matrix0->GetElement(i, j));
     }
   }
+
 
   auto matrix1 = std::make_unique<RowMatrix<int>>(3, 3);
   const std::vector<int> source1{2, -3, 1, 4, 6, 7, 0, 5, -2};
@@ -142,7 +142,6 @@ TEST(StarterTest, DISABLED_AdditionTest) {
 
   // Perform the addition operation
   auto sum = RowMatrixOperations<int>::Add(matrix0.get(), matrix1.get());
-
   // Result of addition should have same dimensions as inputs
   EXPECT_EQ(3, sum->GetRowCount());
   EXPECT_EQ(3, sum->GetColumnCount());
@@ -155,7 +154,7 @@ TEST(StarterTest, DISABLED_AdditionTest) {
 }
 
 /** Test that matrix multiplication works as expected */
-TEST(StarterTest, DISABLED_MultiplicationTest) {
+TEST(StarterTest, MultiplicationTest) {
   const std::vector<int> source0{1, 2, 3, 4, 5, 6};
   auto matrix0 = std::make_unique<RowMatrix<int>>(2, 3);
   matrix0->FillFrom(source0);
@@ -180,6 +179,7 @@ TEST(StarterTest, DISABLED_MultiplicationTest) {
   // Perform the multiplication operation
   auto product = RowMatrixOperations<int>::Multiply(matrix0.get(), matrix1.get());
 
+  printf("%s\n", "spark");
   // (2,3) * (3,2) -> (2,2)
   EXPECT_EQ(2, product->GetRowCount());
   EXPECT_EQ(2, product->GetColumnCount());
@@ -190,4 +190,14 @@ TEST(StarterTest, DISABLED_MultiplicationTest) {
     }
   }
 }
+
+/**
+ * TODO GEMM功能测试
+ * 计算
+ * matrixA` * `matrixB` + `matrixC`
+ */
+TEST(StarterTest, DISABLED_GEMMTest) {
+
+}
+
 }  // namespace bustub

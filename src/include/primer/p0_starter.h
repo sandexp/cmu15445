@@ -40,7 +40,7 @@ class Matrix {
     this->rows_=rows;
     this->cols_=cols;
     // allocate for matrix liner
-    this->linear_=new T[cols];
+    this->linear_=new T[rows];
   }
 
   /** The number of rows in the matrix */
@@ -125,9 +125,11 @@ class RowMatrix : public Matrix<T> {
   RowMatrix(int rows, int cols) : Matrix<T>(rows, cols) {
     this->rows_=rows;
     this->cols_=cols;
+
+    data_=new T*[rows];
     // malloc mem for data
     for (int i = 0; i < rows; ++i) {
-      *(data_+i)=Matrix<T>(rows,cols).linear_;
+        data_[i]=new T[cols];
     }
   }
 
@@ -156,9 +158,10 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if either index is out of range
    */
   T GetElement(int i, int j) const override {
-    ASSERT_LT(i, this->rows_);
-    ASSERT_LT(j, this->cols_);
-    return *(data_+i)[j];
+      if(i<0 || i>=this->rows_ || j<0 || j>= this->cols_){
+          throw Exception{ExceptionType::OUT_OF_RANGE,"Target is out of range."};
+      }
+    return data_[i][j];
   }
 
   /**
@@ -172,9 +175,10 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if either index is out of range
    */
   void SetElement(int i, int j, T val) override {
-    ASSERT_LT(i, this->rows_);
-    ASSERT_LT(j, this->cols_);
-    *(data_+i)[j]=val;
+    if(i<0 || i>=this->rows_ || j<0 || j>= this->cols_){
+        throw Exception{ExceptionType::OUT_OF_RANGE,"Target is out of range."};
+    }
+    data_[i][j]=val;
   }
 
   /**
@@ -189,15 +193,16 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if `source` is incorrect size
    */
   void FillFrom(const std::vector<T> &source) override {
-    if(source.size()!= this->rows_* this->cols_){
+    if(source.size()!= this->rows_ * this->cols_){
       throw Exception{ExceptionType::OUT_OF_RANGE,"Vector size can not fit with matrix."};
     }
-    int line=0;
-    for (int i = 0; i < source.size(); i+= this->cols_) {
-      for (int j = 0; j < this->cols_; ++j) {
-        *(data_+line)[j]=source[i];
+    int row=this->rows_;
+    int col=this->cols_;
+    int p=0;
+    for (int i = 0; i < row; ++i) {
+      for (int j = 0; j < col; ++j) {
+        data_[i][j]=source[p++];
       }
-      line++;
     }
   }
 
@@ -251,10 +256,10 @@ class RowMatrixOperations {
     }
     int row=matrixA->GetRowCount();
     int col=matrixA->GetColumnCount();
-    RowMatrix<T> matrix=RowMatrix<T>(row,col);
+    RowMatrix<T> *matrix=new RowMatrix<T>(row,col);
     for (int i = 0; i < row; ++i) {
       for (int j = 0; j < col; ++j) {
-        matrix.SetElement(i,j,matrixA->GetElement(i,j)+matrixB->GetElement(i,j));
+        matrix->SetElement(i,j,matrixA->GetElement(i,j)+matrixB->GetElement(i,j));
       }
     }
     return std::unique_ptr<RowMatrix<T>>(matrix);
@@ -269,15 +274,20 @@ class RowMatrixOperations {
    */
   static std::unique_ptr<RowMatrix<T>> Multiply(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
     // TODO(P0): Add implementation
-    if (matrixA->GetRowCount()!=matrixB->GetRowCount() || matrixA->GetColumnCount()!=matrixB->GetColumnCount()){
+    if (matrixA->GetColumnCount()!=matrixB->GetRowCount()){
       return nullptr;
     }
     int row=matrixA->GetRowCount();
-    int col=matrixA->GetColumnCount();
-    RowMatrix<T> matrix=RowMatrix<T>(row,col);
+    int col=matrixB->GetColumnCount();
+    int common=matrixA->GetColumnCount();
+
+    RowMatrix<T> *matrix=new RowMatrix<T>(row,col);
     for (int i = 0; i < row; ++i) {
       for (int j = 0; j < col; ++j) {
-        matrix.SetElement(i,j,matrixA->GetElement(i,j)*matrixB->GetElement(i,j));
+          matrix->SetElement(i,j,0);
+          for (int k = 0; k < common; ++k) {
+              matrix->SetElement(i,j,matrix->GetElement(i,j)+matrixA->GetElement(i,k)*matrixB->GetElement(k,j));
+          }
       }
     }
     return std::unique_ptr<RowMatrix<T>>(matrix);
@@ -293,19 +303,23 @@ class RowMatrixOperations {
    */
   static std::unique_ptr<RowMatrix<T>> GEMM(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB,
                                             const RowMatrix<T> *matrixC) {
-    if (matrixA->GetRowCount()!=matrixB->GetRowCount()
-        || matrixA->GetColumnCount()!=matrixB->GetColumnCount()
-        || matrixA->GetRowCount()!=matrixC->GetRowCount()
-        || matrixA->GetColumnCount()!=matrixC->GetColumnCount()){
+    if (matrixA->GetColumnCount()!=matrixB->GetRowCount()
+        || matrixB->GetColumnCount()!=matrixC->GetColumnCount()
+        || matrixA->GetRowCount()!=matrixC->GetRowCount()){
       return nullptr;
     }
     // TODO(P0): Add implementation
     int row=matrixA->GetRowCount();
-    int col=matrixA->GetColumnCount();
+    int col=matrixB->GetColumnCount();
+    int common=matrixA->GetColumnCount();
     RowMatrix<T> matrix=RowMatrix<T>(row,col);
     for (int i = 0; i < row; ++i) {
       for (int j = 0; j < col; ++j) {
-        matrix.SetElement(i,j,matrixA->GetElement(i,j)*matrixB->GetElement(i,j)+matrixC->GetElement(i,j));
+         matrix.SetElement(i,j,0);
+         for (int k = 0; k < common; ++k) {
+            matrix.SetElement(i,j,matrix.GetElement(i,j)+matrixA->GetElement(i,k)*matrixB->GetElement(k,j));
+         }
+         matrix.SetElement(i,j,matrix.GetElement(i,j)+matrixC->GetElement(i,j));
       }
     }
     return std::unique_ptr<RowMatrix<T>>(matrix);
