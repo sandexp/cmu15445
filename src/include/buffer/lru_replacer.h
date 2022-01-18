@@ -15,6 +15,7 @@
 #include <list>
 #include <mutex>  // NOLINT
 #include <vector>
+#include <unordered_map>
 
 #include "buffer/replacer.h"
 #include "common/config.h"
@@ -47,6 +48,22 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+  // lock to keep thread-safe
+  std::mutex mutex_;
+
+  // max pages in lru cache
+  size_t capacity;
+
+  // page numbers
+  size_t page_nums;
+
+  /**
+   * lru list, the tail represent the oldest frame and the first represent the newest
+   */
+  std::list<frame_id_t> pages;
+
+  // quick search of item
+  std::unordered_map<frame_id_t,frame_id_t> location;
 };
 
 }  // namespace bustub
