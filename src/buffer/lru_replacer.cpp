@@ -30,12 +30,14 @@ bool LRUReplacer::Victim(frame_id_t *frame_id) {
     if (page_nums==0){
         return false;
     }
+    mutex_.lock();
     // if frame is found, remove it from lru cache and update page numbers
     int removal=pages.back();
     location.erase(removal);
     pages.pop_back();
     page_nums--;
     *frame_id=removal;
+    mutex_.unlock();
     return true;
 }
 
@@ -47,9 +49,11 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
     if(location.count(frame_id)==0){
         return;
     }
+    mutex_.lock();
     pages.remove(frame_id);
     location.erase(frame_id);
     page_nums--;
+    mutex_.unlock();
 }
 
 /**
@@ -60,9 +64,11 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
     if(location.count(frame_id)>0){
         return;
     }
+    mutex_.lock();
     pages.push_front(frame_id);
     location[frame_id]=frame_id;
     page_nums++;
+    mutex_.unlock();
 }
 
 size_t LRUReplacer::Size() {
