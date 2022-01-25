@@ -21,7 +21,7 @@ namespace bustub {
 
 // NOLINTNEXTLINE
 // Check whether pages containing terminal characters can be recovered
-TEST(ParallelBufferPoolManagerTest, DISABLED_BinaryDataTest) {
+TEST(ParallelBufferPoolManagerTest, BinaryDataTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t num_instances = 5;
@@ -32,7 +32,7 @@ TEST(ParallelBufferPoolManagerTest, DISABLED_BinaryDataTest) {
 
   auto *disk_manager = new DiskManager(db_name);
   auto *bpm = new ParallelBufferPoolManager(num_instances, buffer_pool_size, disk_manager);
-
+  
   page_id_t page_id_temp;
   auto *page0 = bpm->NewPage(&page_id_temp);
 
@@ -59,6 +59,7 @@ TEST(ParallelBufferPoolManagerTest, DISABLED_BinaryDataTest) {
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
   }
 
+
   // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
   for (size_t i = buffer_pool_size; i < buffer_pool_size * num_instances * 2; ++i) {
     EXPECT_EQ(nullptr, bpm->NewPage(&page_id_temp));
@@ -69,16 +70,20 @@ TEST(ParallelBufferPoolManagerTest, DISABLED_BinaryDataTest) {
     EXPECT_EQ(true, bpm->UnpinPage(i, true));
     bpm->FlushPage(i);
   }
+
   for (int i = 0; i < 5; ++i) {
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
     bpm->UnpinPage(page_id_temp, false);
   }
 
+
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
+  if(page0==nullptr){
+  	printf("Null Page\n");
+  }
   EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, PAGE_SIZE));
   EXPECT_EQ(true, bpm->UnpinPage(0, true));
-
   // Shutdown the disk manager and remove the temporary file we created.
   disk_manager->ShutDown();
   remove("test.db");
@@ -88,7 +93,7 @@ TEST(ParallelBufferPoolManagerTest, DISABLED_BinaryDataTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(ParallelBufferPoolManagerTest, DISABLED_SampleTest) {
+TEST(ParallelBufferPoolManagerTest, SampleTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t num_instances = 5;
