@@ -126,7 +126,6 @@ TEST(StarterTest, AdditionTest) {
     }
   }
 
-
   auto matrix1 = std::make_unique<RowMatrix<int>>(3, 3);
   const std::vector<int> source1{2, -3, 1, 4, 6, 7, 0, 5, -2};
   matrix1->FillFrom(source1);
@@ -196,8 +195,6 @@ TEST(StarterTest, MultiplicationTest) {
  * 计算
  * matrixA` * `matrixB` + `matrixC`
  */
-TEST(StarterTest, DISABLED_GEMMTest) {
-
-}
+TEST(StarterTest, DISABLED_GEMMTest) {}
 
 }  // namespace bustub

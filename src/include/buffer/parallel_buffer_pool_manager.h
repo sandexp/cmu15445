@@ -12,11 +12,13 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "buffer/buffer_pool_manager.h"
+#include "buffer/buffer_pool_manager_instance.h"
 #include "recovery/log_manager.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/page/page.h"
-#include "buffer/buffer_pool_manager_instance.h"
 
 namespace bustub {
 
@@ -93,7 +95,7 @@ class ParallelBufferPoolManager : public BufferPoolManager {
    */
   BufferPoolManagerInstance **instances;
 
-  std::unordered_map<page_id_t,uint32_t> page_distribute;
+  std::unordered_map<page_id_t, uint32_t> page_distribute;
 
   std::uint32_t start_index_;
 

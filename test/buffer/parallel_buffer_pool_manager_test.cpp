@@ -32,7 +32,7 @@ TEST(ParallelBufferPoolManagerTest, BinaryDataTest) {
 
   auto *disk_manager = new DiskManager(db_name);
   auto *bpm = new ParallelBufferPoolManager(num_instances, buffer_pool_size, disk_manager);
-  
+
   page_id_t page_id_temp;
   auto *page0 = bpm->NewPage(&page_id_temp);
 
@@ -59,7 +59,6 @@ TEST(ParallelBufferPoolManagerTest, BinaryDataTest) {
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
   }
 
-
   // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
   for (size_t i = buffer_pool_size; i < buffer_pool_size * num_instances * 2; ++i) {
     EXPECT_EQ(nullptr, bpm->NewPage(&page_id_temp));
@@ -76,11 +75,10 @@ TEST(ParallelBufferPoolManagerTest, BinaryDataTest) {
     bpm->UnpinPage(page_id_temp, false);
   }
 
-
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
-  if(page0==nullptr){
-  	printf("Null Page\n");
+  if (page0 == nullptr) {
+    printf("Null Page\n");
   }
   EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, PAGE_SIZE));
   EXPECT_EQ(true, bpm->UnpinPage(0, true));

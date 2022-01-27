@@ -15,8 +15,8 @@
 namespace bustub {
 
 LRUReplacer::LRUReplacer(size_t num_pages) {
-    this->capacity=num_pages;
-    this->page_nums=0;
+  this->capacity = num_pages;
+  this->page_nums = 0;
 }
 
 LRUReplacer::~LRUReplacer() = default;
@@ -27,18 +27,18 @@ LRUReplacer::~LRUReplacer() = default;
  * @return true if removed, false if not found
  */
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
-    if (page_nums==0){
-        return false;
-    }
-    mutex_.lock();
-    // if frame is found, remove it from lru cache and update page numbers
-    int removal=pages.back();
-    location.erase(removal);
-    pages.pop_back();
-    page_nums--;
-    *frame_id=removal;
-    mutex_.unlock();
-    return true;
+  if (page_nums == 0) {
+    return false;
+  }
+  mutex_.lock();
+  // if frame is found, remove it from lru cache and update page numbers
+  int removal = pages.back();
+  location.erase(removal);
+  pages.pop_back();
+  page_nums--;
+  *frame_id = removal;
+  mutex_.unlock();
+  return true;
 }
 
 /**
@@ -46,14 +46,14 @@ bool LRUReplacer::Victim(frame_id_t *frame_id) {
  * @param frame_id pending to removed frame
  */
 void LRUReplacer::Pin(frame_id_t frame_id) {
-    if(location.count(frame_id)==0){
-        return;
-    }
-    mutex_.lock();
-    pages.remove(frame_id);
-    location.erase(frame_id);
-    page_nums--;
-    mutex_.unlock();
+  if (location.count(frame_id) == 0) {
+    return;
+  }
+  mutex_.lock();
+  pages.remove(frame_id);
+  location.erase(frame_id);
+  page_nums--;
+  mutex_.unlock();
 }
 
 /**
@@ -61,18 +61,16 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
  * @param frame_id pending to added frame
  */
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-    if(location.count(frame_id)>0){
-        return;
-    }
-    mutex_.lock();
-    pages.push_front(frame_id);
-    location[frame_id]=frame_id;
-    page_nums++;
-    mutex_.unlock();
+  if (location.count(frame_id) > 0) {
+    return;
+  }
+  mutex_.lock();
+  pages.push_front(frame_id);
+  location[frame_id] = frame_id;
+  page_nums++;
+  mutex_.unlock();
 }
 
-size_t LRUReplacer::Size() {
-    return this->page_nums;
-}
+size_t LRUReplacer::Size() { return this->page_nums; }
 
 }  // namespace bustub

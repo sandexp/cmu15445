@@ -104,7 +104,6 @@ TEST(BufferPoolManagerInstanceTest, SampleTest) {
   snprintf(page0->GetData(), PAGE_SIZE, "Hello");
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
 
-
   // Scenario: We should be able to create new pages until we fill up the buffer pool.
   for (size_t i = 1; i < buffer_pool_size; ++i) {
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
@@ -127,19 +126,18 @@ TEST(BufferPoolManagerInstanceTest, SampleTest) {
 
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
-  printf("page0: %d\tpage_id:%d\n", page0->GetPageId(),page_id_temp);
+  printf("page0: %d\tpage_id:%d\n", page0->GetPageId(), page_id_temp);
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
 
   // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
   // now be pinned. Fetching page 0 should fail.
   EXPECT_EQ(true, bpm->UnpinPage(0, true));
   EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
-  printf("%s\n", "This Operation will fail." );
+  printf("%s\n", "This Operation will fail.");
   EXPECT_EQ(nullptr, bpm->FetchPage(0));
 
-
   // Shutdown the disk manager and remove the temporary file we created.
-  disk_manager->ShutDown(); 
+  disk_manager->ShutDown();
   remove("test.db");
 
   delete bpm;

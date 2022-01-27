@@ -50,11 +50,11 @@ BufferPoolManagerInstance::~BufferPoolManagerInstance() {
 bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
   // Make sure you call DiskManager::WritePage!
   // get page from page table by page_id
-  if(page_table_.count(page_id)==0){
-      return false;
+  if (page_table_.count(page_id) == 0) {
+    return false;
   }
-  frame_id_t frameId=page_table_[page_id];
-  int index=static_cast<int>(frameId);
+  frame_id_t frameId = page_table_[page_id];
+  int index = static_cast<int>(frameId);
   disk_manager_->WritePage(page_id, pages_[index].GetData());
   return true;
 }
@@ -62,8 +62,9 @@ bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
 void BufferPoolManagerInstance::FlushAllPgsImp() {
   // You can do it!
   // iterator on page table and flush it to disk
-  for(std::unordered_map<page_id_t,frame_id_t>::iterator iterator=page_table_.begin();iterator!=page_table_.end();iterator++){
-      FlushPgImp(iterator->first);
+  for (std::unordered_map<page_id_t, frame_id_t>::iterator iterator = page_table_.begin();
+       iterator != page_table_.end(); iterator++) {
+    FlushPgImp(iterator->first);
   }
 }
 
@@ -75,28 +76,28 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   // 4.   Set the page ID output parameter. Return a pointer to P.
 
   // check if all pages in buff are pinned, if so, return null
-  bool flag= true;
+  bool flag = true;
   for (size_t i = 0; i < pool_size_; ++i) {
-    if(pages_[i].GetPinCount()==0){
-        flag= false;
-        break;
+    if (pages_[i].GetPinCount() == 0) {
+      flag = false;
+      break;
     }
   }
-  if(flag){
-      return nullptr;
+  if (flag) {
+    return nullptr;
   }
 
   // find free page in freelist
   for (size_t i = 0; i < pool_size_; ++i) {
-    if(pages_[i].page_id_==INVALID_PAGE_ID){
-        // put page into frame
-        *page_id=next_page_id_;
-        pages_[i].page_id_=next_page_id_;
-        pages_[i].pin_count_=1;
-        pages_[i].ResetMemory();
-        page_table_[next_page_id_]=static_cast<frame_id_t>(i);
-        AllocatePage();
-        return &pages_[i];
+    if (pages_[i].page_id_ == INVALID_PAGE_ID) {
+      // put page into frame
+      *page_id = next_page_id_;
+      pages_[i].page_id_ = next_page_id_;
+      pages_[i].pin_count_ = 1;
+      pages_[i].ResetMemory();
+      page_table_[next_page_id_] = static_cast<frame_id_t>(i);
+      AllocatePage();
+      return &pages_[i];
     }
   }
   // reject page's request
@@ -111,21 +112,21 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   // 2.     If R is dirty, write it back to the disk.
   // 3.     Delete R from the page table and insert P.
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
-  if(page_table_.count(page_id)!=0){
-      frame_id_t fId=page_table_[page_id];
-      int index=static_cast<int>(fId);
-      return &pages_[index];
+  if (page_table_.count(page_id) != 0) {
+    frame_id_t fId = page_table_[page_id];
+    int index = static_cast<int>(fId);
+    return &pages_[index];
   }
 
   // find a replace page in freelist
   for (size_t i = 0; i < pool_size_; ++i) {
-    if(pages_[i].page_id_==INVALID_PAGE_ID){
-        // invalid page must not be dirty, just replace it with page p
-        pages_[i].page_id_=page_id;
-        pages_[i].pin_count_=1;
-        disk_manager_->ReadPage(page_id,pages_[i].GetData());
-        page_table_[page_id]=static_cast<frame_id_t>(i);
-        return &pages_[i];
+    if (pages_[i].page_id_ == INVALID_PAGE_ID) {
+      // invalid page must not be dirty, just replace it with page p
+      pages_[i].page_id_ = page_id;
+      pages_[i].pin_count_ = 1;
+      disk_manager_->ReadPage(page_id, pages_[i].GetData());
+      page_table_[page_id] = static_cast<frame_id_t>(i);
+      return &pages_[i];
     }
   }
   return nullptr;
@@ -137,51 +138,51 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   // 1.   If P does not exist, return true.
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
-  if(page_table_.count(page_id)==0){
-      return true;
+  if (page_table_.count(page_id) == 0) {
+    return true;
   }
-  frame_id_t fid=page_table_[page_id];
-  int index=static_cast<int>(fid);
-  if(pages_[index].pin_count_!=0){
-      return false;
+  frame_id_t fid = page_table_[page_id];
+  int index = static_cast<int>(fid);
+  if (pages_[index].pin_count_ != 0) {
+    return false;
   }
   // remove from page table
   page_table_.erase(page_id);
   // reset metadata
   pages_[index].ResetMemory();
   // return page to freelist
-  pages_[index].page_id_=INVALID_PAGE_ID;
+  pages_[index].page_id_ = INVALID_PAGE_ID;
   DeallocatePage(page_id);
   return true;
 }
 
 bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
-    if(page_table_.count(page_id)==0){
-        return false;
-    }
-    frame_id_t fid=page_table_[page_id];
-    int index=static_cast<int>(fid);
+  if (page_table_.count(page_id) == 0) {
+    return false;
+  }
+  frame_id_t fid = page_table_[page_id];
+  int index = static_cast<int>(fid);
 
-    if(strcmp(pages_[index].GetData(),"")!=0){
-        pages_[index].is_dirty_= true;
-    }
+  if (strcmp(pages_[index].GetData(), "") != 0) {
+    pages_[index].is_dirty_ = true;
+  }
 
-    is_dirty=pages_[index].is_dirty_;
-    if(pages_[index].pin_count_<=0){
-        return false;
+  is_dirty = pages_[index].is_dirty_;
+  if (pages_[index].pin_count_ <= 0) {
+    return false;
+  }
+  pages_[index].pin_count_--;
+  // move unpinned page to disk
+  if (pages_[index].pin_count_ == 0) {
+    if (pages_[index].is_dirty_) {
+      FlushPgImp(pages_[index].page_id_);
     }
-    pages_[index].pin_count_--;
-    // move unpinned page to disk
-    if(pages_[index].pin_count_==0){
-        if(pages_[index].is_dirty_){
-            FlushPgImp(pages_[index].page_id_);
-        }
-        pages_[index].page_id_=INVALID_PAGE_ID;
-        pages_[index].ResetMemory();
-        // remove from page table
-        page_table_.erase(page_id);
-    }
-    return true;
+    pages_[index].page_id_ = INVALID_PAGE_ID;
+    pages_[index].ResetMemory();
+    // remove from page table
+    page_table_.erase(page_id);
+  }
+  return true;
 }
 
 page_id_t BufferPoolManagerInstance::AllocatePage() {

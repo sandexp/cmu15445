@@ -14,10 +14,12 @@
 
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "common/config.h"
 #include "storage/index/int_comparator.h"
 #include "storage/page/hash_table_page_defs.h"
+#include "storage/index/generic_key.h"
 
 namespace bustub {
 /**
@@ -102,6 +104,14 @@ class HashTableBucketPage {
   void SetOccupied(uint32_t bucket_idx);
 
   /**
+   * UnsetOccupied - Updates the bitmap to indicate that the entry at
+   * bucket_idx is not occupied.
+   *
+   * @param bucket_idx the index to update
+   */
+  void UnsetOccupied(uint32_t bucket_idx);
+
+  /**
    * Returns whether or not an index is readable (valid key/value pair)
    *
    * @param bucket_idx index to lookup
@@ -116,6 +126,14 @@ class HashTableBucketPage {
    * @param bucket_idx the index to update
    */
   void SetReadable(uint32_t bucket_idx);
+
+  /**
+   * UnsetReadable - Updates the bitmap to indicate that the entry at
+   * bucket_idx is not readable.
+   *
+   * @param bucket_idx the index to update
+   */
+  void UnsetReadable(uint32_t bucket_idx);
 
   /**
    * @return the number of readable elements, i.e. current size
@@ -137,11 +155,30 @@ class HashTableBucketPage {
    */
   void PrintBucket();
 
+  /**
+   * Set position of n of char s to 1
+   * @param s 8 bit char
+   * @param n position
+   */
+  void BitSet(unsigned char &s,unsigned int n);
+
+  /**
+   * Unset position of n of char s to 1
+   * @param s 8 bit char
+   * @param n position
+   */
+   void UnSet(unsigned char &s,unsigned int n);
+
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
+
+  uint32_t pos;
+
+  uint32_t buckets;
+
   MappingType array_[0];
 };
 
