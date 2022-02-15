@@ -169,13 +169,15 @@ class HashTableBucketPage {
    */
    void UnSet(unsigned char &s,unsigned int n);
 
+   uint32_t Size();
+
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
 
-  uint32_t pos;
+  uint32_t len;
 
   uint32_t buckets;
 

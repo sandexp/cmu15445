@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/parallel_buffer_pool_manager.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -55,11 +56,7 @@ bool ParallelBufferPoolManager::UnpinPgImp(page_id_t page_id, bool is_dirty) {
   // Unpin page_id from responsible BufferPoolManagerInstance
   // route a manager, hand this task to that manager, if page pin reduce to zero, unregister it
   BufferPoolManagerInstance *manager = dynamic_cast<BufferPoolManagerInstance *>(GetBufferPoolManager(page_id));
-  Page *page = manager->FetchPage(page_id);
   bool res = manager->UnpinPage(page_id, is_dirty);
-  if (page->GetPageId() == INVALID_PAGE_ID) {
-    page_distribute.erase(page_id);
-  }
   return res;
 }
 

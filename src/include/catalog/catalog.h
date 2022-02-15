@@ -209,14 +209,12 @@ class Catalog {
 
     // Construct index metdata
     auto meta = std::make_unique<IndexMetadata>(index_name, table_name, &schema, key_attrs);
-
     // Construct the index, take ownership of metadata
     // TODO(Kyle): We should update the API for CreateIndex
     // to allow specification of the index type itself, not
     // just the key, value, and comparator types
     auto index = std::make_unique<ExtendibleHashTableIndex<KeyType, ValueType, KeyComparator>>(std::move(meta), bpm_,
                                                                                                hash_function);
-
     // Populate the index with all tuples in table heap
     auto *table_meta = GetTable(table_name);
     auto *heap = table_meta->table_.get();

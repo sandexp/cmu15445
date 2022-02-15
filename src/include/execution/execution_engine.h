@@ -21,6 +21,8 @@
 #include "execution/executor_factory.h"
 #include "execution/plans/abstract_plan.h"
 #include "storage/table/tuple.h"
+#include "execution/executors/seq_scan_executor.h"
+
 namespace bustub {
 
 /**
@@ -66,6 +68,7 @@ class ExecutionEngine {
       }
     } catch (Exception &e) {
       // TODO(student): handle exceptions
+      LOG_ERROR("Your programmer has meet a problem.");
     }
 
     return true;

@@ -27,7 +27,9 @@ void HashTableDirectoryPage::SetLSN(lsn_t lsn) { lsn_ = lsn; }
 uint32_t HashTableDirectoryPage::GetGlobalDepth() { return global_depth_; }
 
 uint32_t HashTableDirectoryPage::GetGlobalDepthMask() {
-    return 0;
+    uint32_t mask=1;
+    mask=mask << (global_depth_+1);
+    return mask-1;
 }
 
 void HashTableDirectoryPage::IncrGlobalDepth() {
@@ -48,7 +50,14 @@ uint32_t HashTableDirectoryPage::Size() {
     return pages;
 }
 
-bool HashTableDirectoryPage::CanShrink() { return false; }
+bool HashTableDirectoryPage::CanShrink() {
+    for (int i = 0; i < DIRECTORY_ARRAY_SIZE; ++i) {
+        if(global_depth_<=local_depths_[i]){
+            return false;
+        }
+    }
+    return true;
+}
 
 uint32_t HashTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) {
     return local_depths_[bucket_idx];
@@ -67,7 +76,20 @@ void HashTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) {
 }
 
 uint32_t HashTableDirectoryPage::GetLocalHighBit(uint32_t bucket_idx) {
-    return 0;
+    uint32_t mask=GetGlobalDepthMask();
+    uint32_t unmask=~mask;
+    return unmask;
+}
+
+uint32_t HashTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) {
+    return bucket_idx%2==0?(bucket_idx+1):(bucket_idx-1);
+}
+
+uint32_t HashTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx){
+    uint32_t local_depth=local_depths_[bucket_idx];
+    uint32_t mask=1;
+    mask=mask << (local_depth+1);
+    return mask-1;
 }
 
 /**

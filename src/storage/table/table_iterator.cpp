@@ -54,7 +54,6 @@ TableIterator &TableIterator::operator++() {
     }
   }
   tuple_->rid_ = next_tuple_rid;
-
   if (*this != table_heap_->End()) {
     table_heap_->GetTuple(tuple_->rid_, tuple_, txn_);
   }

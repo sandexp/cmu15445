@@ -67,7 +67,7 @@ class Tuple {
   // Get the address of this tuple in the table's backing store
   inline char *GetData() const { return data_; }
 
-  // Get length of the tuple, including varchar legth
+  // Get length of the tuple, including varchar length
   inline uint32_t GetLength() const { return size_; }
 
   // Get the value of a specified column (const)

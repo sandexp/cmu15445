@@ -21,19 +21,22 @@ namespace bustub {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) {
-  for (int i = 0; i < pos; ++i) {
-    if(cmp(key,array_[i].first)==0){
-        return true;
+  bool flag= false;
+  for (int i = 0; i < len; ++i) {
+    if(IsOccupied(i) && IsReadable(i) && cmp(key,array_[i].first)==0){
+        result->push_back(array_[i].second);
+        flag=true;
     }
   }
-  return false;
+  return flag;
 }
+
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator cmp) {
   // set occupied info of bucket_id
-  uint32_t bucket_id=pos;
-  for (size_t i = 0; i < pos; ++i) {
+  uint32_t bucket_id=len;
+  for (size_t i = 0; i < len; ++i) {
     if(cmp(array_[i].first,key)==0 && array_[i].second==value){
         return false;
     }
@@ -41,7 +44,7 @@ bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator 
   MappingType pair=std::pair<KeyType,ValueType>(key,value);
   SetOccupied(bucket_id);
   SetReadable(bucket_id);
-  array_[pos++]=pair;
+  array_[len++]=pair;
   buckets++;
   return true;
 }
@@ -53,9 +56,9 @@ bool HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator 
    * First we must retrieve key from array, and get index of kv, then use it as bucket_id to delete kv.
    */
   int index=-1;
-  for (int i = 0; i < pos; ++i) {
+  for (int i = 0; i < len; ++i) {
       MappingType pair=array_[i];
-      if(cmp(pair.first,key)==0){
+      if(cmp(pair.first,key)==0 && value==pair.second){
           // remove target key
           index=i;
           break;
@@ -90,7 +93,7 @@ ValueType HASH_TABLE_BUCKET_TYPE::ValueAt(uint32_t bucket_idx) const {
 template <typename KeyType, typename ValueType, typename KeyComparator>
 void HASH_TABLE_BUCKET_TYPE::RemoveAt(uint32_t bucket_idx) {
   uint32_t index=bucket_idx/8;
-  if(index>pos){
+  if(index>len){
       return;
   }
   buckets--;
@@ -143,7 +146,7 @@ void HASH_TABLE_BUCKET_TYPE::UnsetReadable(uint32_t bucket_idx) {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsFull() {
-  return buckets==pos;
+  return buckets==BUCKET_ARRAY_SIZE;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -192,6 +195,11 @@ void HASH_TABLE_BUCKET_TYPE::UnSet(unsigned char &s,unsigned int n){
     unsigned char a=1;
     a=a<<(7-n);
     s=s & (~a);
+}
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
+uint32_t HASH_TABLE_BUCKET_TYPE::Size() {
+    return len;
 }
 
 // DO NOT REMOVE ANYTHING BELOW THIS LINE
