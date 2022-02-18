@@ -100,15 +100,16 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
       page_table_.erase(pages_[index].GetPageId());
   }
 
-  page_id_t pageId=AllocatePage();
-  *page_id=pageId;
+  *page_id=AllocatePage();
+  // LOG_INFO("Begin to allocate. Index= %d, Pool Size= %d, Page Id= %d",index,pool_size_,*page_id);
   // Reset metadata
   pages_[index].ResetMemory();
-  pages_[index].page_id_=pageId;
+  pages_[index].page_id_=*page_id;
   pages_[index].is_dirty_= false;
   pages_[index].pin_count_=1;
   // register to page table
-  page_table_[pageId]=frameId;
+  page_table_[*page_id]=frameId;
+  // LOG_INFO("Allocate Page %d",*page_id);
   return &pages_[index];
 }
 

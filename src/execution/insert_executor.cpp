@@ -52,14 +52,14 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
         // Raw insert
         std::vector<std::vector<Value>> values=plan_->RawValues();
         // translate raw values to tuple
-        for (int i = 0; i < values.size(); ++i) {
+        for (size_t i = 0; i < values.size(); ++i) {
             // insert into table
             Tuple target=Tuple(values[i],&schema);
             bool is_success=table_info->table_->InsertTuple(target, rid,txn);
             if(is_success){
                 // step 2: update index with extendible hash table
-                for (int i = 0; i < index_infos.size(); ++i) {
-                    UpdateIndex(index_infos[i],target,rid,txn);
+                for (size_t j = 0; j < index_infos.size(); ++j) {
+                    UpdateIndex(index_infos[j],target,rid,txn);
                 }
             }
         }
@@ -78,7 +78,7 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
             bool is_success=table_info->table_->InsertTuple(sub_tuple,&sub_rid,txn);
             if(is_success){
                 // step 2: update index with extendible hash table
-                for (int i = 0; i < index_infos.size(); ++i) {
+                for (size_t i = 0; i < index_infos.size(); ++i) {
                     UpdateIndex(index_infos[i],sub_tuple,rid,txn);
                 }
             }

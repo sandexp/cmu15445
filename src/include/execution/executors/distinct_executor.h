@@ -48,10 +48,16 @@ class DistinctExecutor : public AbstractExecutor {
   /** @return The output schema for the distinct */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
+  uint64_t GetHashCode(Tuple tuple,Schema schema);
+
  private:
   /** The distinct plan node to be executed */
   const DistinctPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+  /** Hash table to implement distinct*/
+  std::unordered_set<uint64_t> hash_table_;
+  /** Hash Function*/
+  HashFunction<std::string> hash_fn_;
 };
 }  // namespace bustub

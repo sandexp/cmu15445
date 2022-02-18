@@ -98,6 +98,7 @@ bool HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const
   HashTableBucketPage<KeyType,ValueType,KeyComparator>* bucket_page=FetchBucketPage(bucket_page_id);
   table_latch_.WUnlock();
   if(bucket_page->IsFull()){
+      LOG_INFO("Insert Split.");
       return SplitInsert(transaction,key,value);
   }else{
       return bucket_page->Insert(key,value,comparator_);
@@ -113,12 +114,13 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   // do reshuffle
   page_id_t temp_page_ids[DIRECTORY_ARRAY_SIZE];
   int temp_local_depths[DIRECTORY_ARRAY_SIZE];
-  for (int i = 0; i < dir_page->Size(); ++i) {
+  for (size_t i = 0; i < dir_page->Size(); ++i) {
     temp_page_ids[i]=dir_page->GetBucketPageId(i);
     temp_local_depths[i]=dir_page->GetLocalDepth(i);
   }
+
   // double buckets
-  for (int i = 0; i < dir_page->Size() * 2; ++i) {
+  for (size_t i = 0; i < dir_page->Size() * 2; ++i) {
     uint32_t index=2*i;
     dir_page->SetBucketPageId(index,temp_page_ids[i]);
     dir_page->SetBucketPageId(index+1,temp_page_ids[i]);
@@ -126,9 +128,8 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
     dir_page->SetLocalDepth(index+1,temp_local_depths[i]);
   }
   // modify current key bucket and reshuffle
-  page_id_t* page_id;
+  page_id_t* page_id= nullptr;
   buffer_pool_manager_->NewPage(page_id);
-
   // allocate new page and reshuffle two buckets elements
   uint32_t bucket_id=KeyToDirectoryIndex(key,dir_page);
   if(org_bucket_id*2==bucket_id){
@@ -144,12 +145,13 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   HashTableBucketPage<KeyType,ValueType,KeyComparator>* org_bucket_page= FetchBucketPage(bucket_id);
   HashTableBucketPage<KeyType,ValueType,KeyComparator>* new_page=FetchBucketPage(*page_id);
 
-  for (int i = 0; i < org_bucket_page->Size(); ++i) {
+  for (size_t i = 0; i < org_bucket_page->Size(); ++i) {
       if(org_bucket_page->IsReadable(i) && KeyToDirectoryIndex(org_bucket_page->KeyAt(i),dir_page)!=bucket_id){
           new_page->Insert(org_bucket_page->KeyAt(i),org_bucket_page->ValueAt(i),comparator_);
           org_bucket_page->RemoveAt(i);
       }
   }
+
   // handle split task to current dir page with new inserted value
   return Insert(transaction,key,value);
 }
