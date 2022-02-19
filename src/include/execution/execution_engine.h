@@ -68,7 +68,7 @@ class ExecutionEngine {
       }
     } catch (Exception &e) {
       // TODO(student): handle exceptions
-      LOG_ERROR("Your programmer has meet a problem.");
+      LOG_ERROR("Your programmer has meet a problem. Detail: ",e.what());
     }
 
     return true;

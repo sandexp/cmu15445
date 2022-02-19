@@ -19,8 +19,68 @@
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
+#include "execution/expressions/abstract_expression.h"
 
 namespace bustub {
+
+
+class SimpleHashTable {
+public:
+    SimpleHashTable(const AbstractExpression* key_expr){
+        this->key_expr_=key_expr;
+    }
+
+    /**
+     * Insert Tuple into current hash table
+     * @param tuple
+     * @param schema
+     */
+    void Insert(Tuple* tuple,Schema* schema){
+        Value value=key_expr_->Evaluate(tuple,schema);
+        uint64_t hash_code=GetHashCode(&value);
+        kt_[hash_code].push_back(*tuple);
+    }
+
+    /**
+     * Get tuple by using outside expression, lookup the same key in current hash table.
+     * @param tuple outside tuple
+     * @param expression outside expression
+     * @return whether same key exist
+     */
+    bool Contain(Tuple* tuple,Schema* schema,AbstractExpression* expression){
+        Value value=expression->Evaluate(tuple,schema);
+        return kt_.find(GetHashCode(&value))!=kt_.end();
+    }
+
+    /**
+     * Get equivalent value of given tuple
+     * @param tuple target tuple
+     * @param schema schema info
+     * @param expression outside expression
+     * @return equivalent value list
+     */
+    std::vector<Tuple> Get(Tuple* tuple,Schema* schema,AbstractExpression* expression){
+        Value value=expression->Evaluate(tuple,schema);
+        uint64_t hash_code=GetHashCode(&value);
+        if (kt_.find(hash_code)==kt_.end())
+            return {};
+        return kt_[hash_code];
+    }
+
+private:
+    uint64_t GetHashCode(Value* value){
+        return hash_fn_.GetHash(*value);
+    }
+
+
+private:
+    /** Hash table which storage tuples. */
+    std::unordered_map<uint64_t ,std::vector<Tuple>> kt_{};
+    /** Key Evaluator */
+    const AbstractExpression* key_expr_;
+    /** Hash Function */
+    HashFunction<Value> hash_fn_;
+};
 
 /**
  * HashJoinExecutor executes a nested-loop JOIN on two tables.
@@ -54,6 +114,14 @@ class HashJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const HashJoinPlanNode *plan_;
+  /**Left executor */
+  std::unique_ptr<AbstractExecutor> left_executor_;
+  /**Right executor*/
+  std::unique_ptr<AbstractExecutor> right_executor_;
+  /**Simple Hash Table */
+  SimpleHashTable* hast_table_;
+  /** Result list**/
+  std::list<Tuple> result;
 };
 
 }  // namespace bustub
