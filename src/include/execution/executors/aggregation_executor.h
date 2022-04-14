@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -210,11 +211,11 @@ class AggregationExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_;
   /** Simple aggregation hash table */
   // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
-  SimpleAggregationHashTable* hash_table_;
+  SimpleAggregationHashTable *hash_table_;
   /** Simple aggregation hash table iterator */
   // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
   SimpleAggregationHashTable::Iterator iterator_ = SimpleAggregationHashTable::Iterator({});
   /** Result list */
-  std::list<Tuple> result;
+  std::list<Tuple> result_;
 };
 }  // namespace bustub

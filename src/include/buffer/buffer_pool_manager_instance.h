@@ -58,6 +58,16 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   /** @return pointer to all the pages in the buffer pool */
   Page *GetPages() { return pages_; }
 
+  /**
+   * Print pages info in buffer. Just for test.
+   */
+  void PrintBufferPoolPages();
+
+  /**
+   * Print pin-count of given {@code page_id} without incr pin count.
+   */
+  void PrintPinCount(page_id_t page_id);
+
  protected:
   /**
    * Fetch the requested page from the buffer pool.

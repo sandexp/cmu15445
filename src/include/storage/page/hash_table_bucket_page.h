@@ -12,14 +12,14 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
 #include "common/config.h"
+#include "storage/index/generic_key.h"
 #include "storage/index/int_comparator.h"
 #include "storage/page/hash_table_page_defs.h"
-#include "storage/index/generic_key.h"
 
 namespace bustub {
 /**
@@ -160,26 +160,24 @@ class HashTableBucketPage {
    * @param s 8 bit char
    * @param n position
    */
-  void BitSet(unsigned char &s,unsigned int n);
+  unsigned char BitSet(unsigned char s, unsigned int n);
 
   /**
    * Unset position of n of char s to 1
    * @param s 8 bit char
    * @param n position
    */
-   void UnSet(unsigned char &s,unsigned int n);
+  unsigned char UnSet(unsigned char s, unsigned int n);
 
-   uint32_t Size();
+  uint32_t Size();
+
+  void ReSet();
 
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
-
-  uint32_t len;
-
-  uint32_t buckets;
 
   MappingType array_[0];
 };

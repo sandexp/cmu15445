@@ -14,10 +14,7 @@
 
 namespace bustub {
 
-LRUReplacer::LRUReplacer(size_t num_pages) {
-  this->capacity = num_pages;
-  this->page_nums = 0;
-}
+LRUReplacer::LRUReplacer(size_t num_pages_) { this->capacity_ = num_pages_; }
 
 LRUReplacer::~LRUReplacer() = default;
 
@@ -27,17 +24,15 @@ LRUReplacer::~LRUReplacer() = default;
  * @return true if removed, false if not found
  */
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
-  if (page_nums == 0) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  if (this->pages_.empty()) {
     return false;
   }
-  mutex_.lock();
   // if frame is found, remove it from lru cache and update page numbers
-  int removal = pages.back();
-  location.erase(removal);
-  pages.pop_back();
-  page_nums--;
+  int removal = pages_.back();
+  location_.erase(removal);
+  pages_.pop_back();
   *frame_id = removal;
-  mutex_.unlock();
   return true;
 }
 
@@ -46,14 +41,12 @@ bool LRUReplacer::Victim(frame_id_t *frame_id) {
  * @param frame_id pending to removed frame
  */
 void LRUReplacer::Pin(frame_id_t frame_id) {
-  if (location.count(frame_id) == 0) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  if (location_.count(frame_id) == 0) {
     return;
   }
-  mutex_.lock();
-  pages.remove(frame_id);
-  location.erase(frame_id);
-  page_nums--;
-  mutex_.unlock();
+  pages_.remove(frame_id);
+  location_.erase(frame_id);
 }
 
 /**
@@ -61,16 +54,17 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
  * @param frame_id pending to added frame
  */
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-  if (location.count(frame_id) > 0) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  if (location_.count(frame_id) > 0) {
     return;
   }
-  mutex_.lock();
-  pages.push_front(frame_id);
-  location[frame_id] = frame_id;
-  page_nums++;
-  mutex_.unlock();
+  pages_.push_front(frame_id);
+  location_[frame_id] = frame_id;
 }
 
-size_t LRUReplacer::Size() { return this->page_nums; }
+size_t LRUReplacer::Size() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  return this->pages_.size();
+}
 
 }  // namespace bustub

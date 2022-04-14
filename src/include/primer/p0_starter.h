@@ -219,7 +219,7 @@ class RowMatrix : public Matrix<T> {
     this->rows_ = 0;
     this->cols_ = 0;
 
-    delete data_;
+    delete[] data_;
   }
 
  private:

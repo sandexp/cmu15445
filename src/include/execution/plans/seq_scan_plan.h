@@ -31,8 +31,7 @@ class SeqScanPlanNode : public AbstractPlanNode {
    * @param table_oid The identifier of table to be scanned
    */
   SeqScanPlanNode(const Schema *output, const AbstractExpression *predicate, table_oid_t table_oid)
-      : AbstractPlanNode(output, {}), predicate_{predicate}, table_oid_{table_oid} {
-  }
+      : AbstractPlanNode(output, {}), predicate_{predicate}, table_oid_{table_oid} {}
 
   /** @return The type of the plan node */
   PlanType GetType() const override { return PlanType::SeqScan; }

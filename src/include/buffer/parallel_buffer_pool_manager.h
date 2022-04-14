@@ -93,9 +93,9 @@ class ParallelBufferPoolManager : public BufferPoolManager {
   /**
    * Instances
    */
-  BufferPoolManagerInstance **instances;
+  BufferPoolManagerInstance **instances_;
 
-  std::unordered_map<page_id_t, uint32_t> page_distribute;
+  std::unordered_map<page_id_t, uint32_t> page_distribute_;
 
   std::uint32_t start_index_;
 

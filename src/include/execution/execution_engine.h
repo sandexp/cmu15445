@@ -19,9 +19,9 @@
 #include "concurrency/transaction_manager.h"
 #include "execution/executor_context.h"
 #include "execution/executor_factory.h"
+#include "execution/executors/seq_scan_executor.h"
 #include "execution/plans/abstract_plan.h"
 #include "storage/table/tuple.h"
-#include "execution/executors/seq_scan_executor.h"
 
 namespace bustub {
 
@@ -68,7 +68,7 @@ class ExecutionEngine {
       }
     } catch (Exception &e) {
       // TODO(student): handle exceptions
-      LOG_ERROR("Your programmer has meet a problem. Detail: ",e.what());
+      LOG_ERROR("Your programmer has meet a problem. Detail: ", e.what());
     }
 
     return true;

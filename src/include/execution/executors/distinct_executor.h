@@ -12,7 +12,10 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
+#include <string>
+#include <unordered_set>
 #include <utility>
 
 #include "execution/executors/abstract_executor.h"
@@ -48,7 +51,7 @@ class DistinctExecutor : public AbstractExecutor {
   /** @return The output schema for the distinct */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
-  uint64_t GetHashCode(Tuple tuple,Schema schema);
+  uint64_t GetHashCode(const Tuple& tuple, const Schema& schema);
 
  private:
   /** The distinct plan node to be executed */
@@ -59,5 +62,7 @@ class DistinctExecutor : public AbstractExecutor {
   std::unordered_set<uint64_t> hash_table_;
   /** Hash Function*/
   HashFunction<std::string> hash_fn_;
+  /** Result List */
+  std::list<Tuple> result_;
 };
 }  // namespace bustub

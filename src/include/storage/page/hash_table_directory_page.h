@@ -150,6 +150,16 @@ class HashTableDirectoryPage {
   void SetLocalDepth(uint32_t bucket_idx, uint8_t local_depth);
 
   /**
+   * Shrink directory when current global depth meet shrink condition.
+   */
+  void Shrink();
+
+  /**
+   * Grow global depth and reallocate bucket page info and local depth info
+   */
+  void Grow();
+
+  /**
    * Increment the local depth of the bucket at bucket_idx
    * @param bucket_idx bucket index to increment
    */
@@ -186,13 +196,17 @@ class HashTableDirectoryPage {
    */
   void PrintDirectory();
 
+  /**
+   * Mock global depth, only can be for test.
+   */
+  void MockGlobalDepth(uint32_t global_depth);
+
  private:
   page_id_t page_id_;
   lsn_t lsn_;
   uint32_t global_depth_{0};
   uint8_t local_depths_[DIRECTORY_ARRAY_SIZE];
   page_id_t bucket_page_ids_[DIRECTORY_ARRAY_SIZE];
-  uint32_t pages;
 };
 
 }  // namespace bustub

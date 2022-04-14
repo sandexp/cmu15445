@@ -56,7 +56,7 @@ class InsertExecutor : public AbstractExecutor {
   /** @return The output schema for the insert */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
-  void UpdateIndex(IndexInfo* index_info,Tuple tuple,RID* rid,Transaction* txn);
+  void UpdateIndex(IndexInfo *index_info, const Tuple& tuple, RID *rid, Transaction *txn);
 
  private:
   /** The insert plan node to be executed*/

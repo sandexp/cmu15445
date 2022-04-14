@@ -13,6 +13,7 @@
 #pragma once
 
 #include <vector>
+#include <list>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -47,11 +48,17 @@ class SeqScanExecutor : public AbstractExecutor {
   /** @return The output schema for the sequential scan */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); }
 
+  /** get template tuples  */
+  std::list<Tuple> GetTemplateTuples();
+
  private:
   /** The sequential scan plan node to be executed */
   const SeqScanPlanNode *plan_;
 
   /** Iterator for scan, user defined member*/
-  TableIterator iterator = TableIterator(nullptr, bustub::RID(), nullptr);
+  TableIterator iterator_ = TableIterator(nullptr, bustub::RID(), nullptr);
+
+  /** Data Pipeline */
+  std::list<Tuple> result_;
 };
 }  // namespace bustub

@@ -18,37 +18,37 @@ namespace bustub {
 UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx) {
-    this->plan_=plan;
-    this->child_executor_= static_cast<std::unique_ptr<AbstractExecutor, std::default_delete<AbstractExecutor>> &&>(child_executor);
+  this->plan_ = plan;
+  this->child_executor_ =
+      static_cast<std::unique_ptr<AbstractExecutor, std::default_delete<AbstractExecutor>> &&>(child_executor);
 }
-
 
 /**
  * Init Update Operator
  * Just set environment of execution
  */
 void UpdateExecutor::Init() {
-    table_oid_t tId=plan_->TableOid();
-    table_info_=GetExecutorContext()->GetCatalog()->GetTable(tId);
-    child_executor_->Init();
-    assert(table_info_!= nullptr);
+  table_oid_t t_id = plan_->TableOid();
+  table_info_ = GetExecutorContext()->GetCatalog()->GetTable(t_id);
+  child_executor_->Init();
+  assert(table_info_ != nullptr);
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-    Transaction* txn=GetExecutorContext()->GetTransaction();
-    std::vector<IndexInfo*> indexes=GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_);
-    while (child_executor_->Next(tuple,rid)){
-        // modify tuple in table
-        // update tuple and update index info
-        Tuple updated=GenerateUpdatedTuple(*tuple);
-        table_info_->table_->UpdateTuple(updated,*rid,txn);
-        // update index info
-        for (size_t i = 0; i < indexes.size(); ++i) {
-            indexes[i]->index_->DeleteEntry(*tuple,*rid,txn);
-            indexes[i]->index_->InsertEntry(updated,updated.GetRid(),txn);
-        }
+  Transaction *txn = GetExecutorContext()->GetTransaction();
+  std::vector<IndexInfo *> indexes = GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_);
+  while (child_executor_->Next(tuple, rid)) {
+    // modify tuple in table
+    // update tuple and update index info
+    Tuple updated = GenerateUpdatedTuple(*tuple);
+    table_info_->table_->UpdateTuple(updated, *rid, txn);
+    // update index info
+    for (auto & index : indexes) {
+      index->index_->DeleteEntry(*tuple, *rid, txn);
+      index->index_->InsertEntry(updated, updated.GetRid(), txn);
     }
-    return false;
+  }
+  return false;
 }
 
 Tuple UpdateExecutor::GenerateUpdatedTuple(const Tuple &src_tuple) {

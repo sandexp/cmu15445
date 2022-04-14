@@ -84,6 +84,68 @@ class ExtendibleHashTable {
    */
   void VerifyIntegrity();
 
+  /**
+   * Test grow of dictionary. This is just for test.
+   */
+  bool MockGrowDictionary();
+
+  /**
+   * Mock metadata for grow and shrink test, just for test, can not be used for operation
+   * @param global_depth mocked global depth
+   * @param local_depths mocked local depth
+   * @param bucket_pages mocked bucket pages
+   */
+  HashTableDirectoryPage *MockMetadata(uint32_t global_depth, std::vector<uint32_t> local_depths,
+                                       std::vector<page_id_t> bucket_pages);
+
+  /**
+   * Mock Split Process.
+   */
+  void MockSplitProcess(uint32_t split_bucket_index);
+
+  /**
+   * Mock Shrink Directory.
+   * @param global_depth global depth
+   * @param local_depth local depths
+   * @param pages pages info
+   */
+  void MockShrinkDirectory(uint32_t global_depth, const std::vector<uint32_t> &local_depth,
+                           const std::vector<page_id_t> &pages);
+
+  /**
+   * Mock merge process, on occur when one bucket page is empty.
+   * Assert {@code empty_index} is empty bucket page.
+   * @param dir_page dir page
+   * @param empty_index empty bucket index
+   */
+  void MockMergeProcess(HashTableDirectoryPage *dir_page, uint32_t empty_index);
+
+  /**
+   * Mock Split Process.
+   */
+  uint32_t GetKeyBucket(KeyType key);
+
+  /**
+   * Print metadata of ext hash table.
+   */
+  void PrintHashTableMetadata();
+
+  /**
+   * Get directory page, just for test.
+   * @return directory page
+   */
+  HashTableDirectoryPage *GetDirectoryPage();
+
+  /**
+   * Print buckets of current pages.
+   */
+  void PrintBuckets(HashTableDirectoryPage *dir_page);
+
+  /**
+   * Print Buffer Pool Usage. Just for test.
+   */
+  void PrintBufferPoolUsage();
+
  private:
   /**
    * Hash - simple helper to downcast MurmurHash's 64-bit hash to 32-bit
@@ -160,6 +222,40 @@ class ExtendibleHashTable {
    * @param value the value that was removed
    */
   void Merge(Transaction *transaction, const KeyType &key, const ValueType &value);
+
+  /**
+   * Sub-Merge of bucket ,this method is used to solved nested merge problem when empty_bucket and its split image are
+   * both empty
+   * @param transaction txn
+   * @param empty_index empty index of dir
+   */
+  void SubMerge(Transaction *transaction, uint32_t empty_index);
+
+  /**
+   * Get page from bucket page, this is a assist function to fetch w/r latches.
+   * @param bucketPage bucket page
+   * @return underlying page
+   */
+  Page *GetPage(HashTableBucketPage<KeyType, ValueType, KeyComparator> *bucketPage);
+
+  /**
+   * Split page and reallocate local depth info and bucket info of given directory.
+   * @param dir_page target directory page
+   * @param split_bucket_index original split page
+   * @return split image index to retrieve split image bucket
+   */
+  uint32_t SplitPage(HashTableDirectoryPage *dir_page, uint32_t split_bucket_index);
+
+  /**
+   * Shuffle data between {@code from_page_id} and {@code to_page_id}.
+   * @param from_page_id data source page id
+   * @param to_page_id data destination page id
+   * @param from_dir_index data sources index in dir
+   * @param to_dir_index desc index in dir
+   * @param comparator key comparator
+   * @return true if completed, false if errors occur
+   */
+  bool Shuffle(HashTableDirectoryPage *dir_page, uint32_t from_index, uint32_t to_index, uint32_t mask);
 
   // member variables
   page_id_t directory_page_id_;

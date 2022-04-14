@@ -10,44 +10,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "type/value.h"
 #include "execution/executors/seq_scan_executor.h"
 
 namespace bustub {
 
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : AbstractExecutor(exec_ctx) {
-    plan_=plan;
+  plan_ = plan;
 }
 
 void SeqScanExecutor::Init() {
+  table_oid_t t_id = plan_->GetTableOid();
+  TableInfo *info = GetExecutorContext()->GetCatalog()->GetTable(t_id);
 
-    table_oid_t tId=plan_->GetTableOid();
-    TableInfo* info=GetExecutorContext()->GetCatalog()->GetTable(tId);
-
-    assert(info!= nullptr);
-    // Init table iterator
-    iterator=info->table_->Begin(GetExecutorContext()->GetTransaction());
+  assert(info != nullptr && info->table_ != nullptr);
+  assert(plan_->GetType()==PlanType::SeqScan);
+  // Init table iterator_
+  iterator_ = info->table_->Begin(GetExecutorContext()->GetTransaction());
+  const AbstractExpression *predicate = plan_->GetPredicate();
+  const Schema *schema = &info->schema_;
+  Tuple tuple;
+  while (iterator_ != info->table_->End()){
+    tuple = *iterator_;
+    ++iterator_;
+    if(predicate == nullptr || predicate->Evaluate(&tuple, schema).GetAs<bool>()){
+      result_.push_back(tuple);
+    }
+  }
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
+  if(result_.empty()){
+    return false;
+  }
+  *tuple = result_.front();
+  *rid = tuple->GetRid();
+  result_.pop_front();
+  return true;
+}
 
-    const AbstractExpression* predicate=plan_->GetPredicate();
-    table_oid_t tId=plan_->GetTableOid();
-    TableInfo* info=GetExecutorContext()->GetCatalog()->GetTable(tId);
-    const Schema* schema=&info->schema_;
-
-    if(iterator==info->table_->End()){
-        return false;
-    }
-
-    *rid=iterator->GetRid();
-    *tuple=*iterator;
-
-    ++iterator;
-    if(predicate== nullptr)
-        return true;
-    Value value=predicate->Evaluate(tuple,schema);
-    return value.GetAs<bool>();
+std::list<Tuple> SeqScanExecutor::GetTemplateTuples() {
+  return result_;
 }
 
 }  // namespace bustub

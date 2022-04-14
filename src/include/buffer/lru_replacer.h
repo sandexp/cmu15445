@@ -51,19 +51,14 @@ class LRUReplacer : public Replacer {
   // lock to keep thread-safe
   std::mutex mutex_;
 
-  // max pages in lru cache
-  size_t capacity;
-
-  // page numbers
-  size_t page_nums;
-
+  uint32_t capacity_;
   /**
    * lru list, the tail represent the oldest frame and the first represent the newest
    */
-  std::list<frame_id_t> pages;
+  std::list<frame_id_t> pages_;
 
   // quick search of item
-  std::unordered_map<frame_id_t, frame_id_t> location;
+  std::unordered_map<frame_id_t, frame_id_t> location_;
 };
 
 }  // namespace bustub
