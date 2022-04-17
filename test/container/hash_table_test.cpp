@@ -19,6 +19,11 @@
 #include "gtest/gtest.h"
 #include "murmur3/MurmurHash3.h"
 
+/**
+ * 1. 并发扩容/缩减容量失败
+ *
+ * 2. scale 测试时候 断言出错，问题在于目标数据页不是 原始页或者split image页
+ */
 namespace bustub {
 
 // NOLINTNEXTLINE
@@ -96,6 +101,7 @@ TEST(HashTableTest, SampleTest) {
       EXPECT_EQ(2 * i, res[0]);
     }
   }
+
   ht.VerifyIntegrity();
   // delete all values
   for (int i = 0; i < 5; i++) {

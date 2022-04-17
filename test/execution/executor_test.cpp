@@ -78,6 +78,12 @@
  * this function is in `src/catalog/table_generator.cpp`.
  */
 
+/**
+ * 1. 套用 Aggr 的方式实现distinct
+ * 4. 优化nestlop的io成本, 注意通过谓词下推, 投影裁切等方式提前过滤
+ * 2. 插入数据bug修复(insert ... select ... , select ...)
+ * 3. 更新数据bug修复(主要是带索引更新)
+ */
 namespace bustub {
 
 // Parameters for index construction
@@ -86,29 +92,24 @@ using ValueType = RID;
 using ComparatorType = GenericComparator<8>;
 using HashFunctionType = HashFunction<KeyType>;
 
-
 // SELECT col_a, col_b FROM test_1
-TEST_F(ExecutorTest, DISABLED_DataReferenceTest) {
+TEST_F(ExecutorTest, DataReferenceTest) {
   // Construct query plan
-  TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-  const Schema &schema = table_info->schema_;
-  auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
-  auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
-  auto *const500 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(500));
-  auto *predicate = MakeComparisonExpression(col_a, const500, ComparisonType::LessThan);
-  auto *out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
-  SeqScanPlanNode plan{out_schema, nullptr, table_info->oid_};
+  auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_7");
+  auto &schema = table_info->schema_;
 
-  // Execute
+  auto *col_c = MakeColumnValueExpression(schema, 0, "colC");
+  auto *out_schema = MakeOutputSchema({{"colC", col_c}});
+  // Construct sequential scan
+  auto seq_scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, nullptr, table_info->oid_);
+
+  // Execute sequential scan with DISTINCT
   std::vector<Tuple> result_set{};
-  GetExecutionEngine()->Execute(&plan, &result_set, GetTxn(), GetExecutorContext());
+  GetExecutionEngine()->Execute(seq_scan_plan.get(), &result_set, GetTxn(), GetExecutorContext());
 
   // Verify
   for (const auto &tuple : result_set) {
-    printf("| Col A  = %d | Col B = %d |\n", 
-      tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), 
-      tuple.GetValue(out_schema, out_schema->GetColIdx("colB")).GetAs<int32_t>()
-    );
+    printf("| Col C  = %d |\n", tuple.GetValue(out_schema, out_schema->GetColIdx("colC")).GetAs<int32_t>());
   }
 }
 
@@ -136,7 +137,6 @@ TEST_F(ExecutorTest, SimpleSeqScanRange1Test) {
   }
 }
 
-
 TEST_F(ExecutorTest, SimpleSeqScanEqualTest) {
   // Construct query plan
   TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
@@ -155,7 +155,7 @@ TEST_F(ExecutorTest, SimpleSeqScanEqualTest) {
   // Verify
   ASSERT_EQ(result_set.size(), 1);
   for (const auto &tuple : result_set) {
-      ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>()==50);
+    ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>() == 50);
   }
 }
 
@@ -375,7 +375,6 @@ TEST_F(ExecutorTest, SimpleUpdateTest) {
   }
 }
 
-
 // UPDATE test_1 SET col_a = -1 where col_a > 800;
 TEST_F(ExecutorTest, SimpleUpdateWithPredicateWithoutIndexTest) {
   // Construct a sequential scan of the table
@@ -409,10 +408,10 @@ TEST_F(ExecutorTest, SimpleUpdateWithPredicateWithoutIndexTest) {
   // Verify results
   ASSERT_EQ(result_set.size(), 199);
 
-  
   for (auto i = 0UL; i < 199; ++i) {
     auto &tuple = result_set[i];
-    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(801+i));
+    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(),
+              static_cast<int32_t>(801 + i));
   }
 
   result_set.clear();
@@ -431,8 +430,8 @@ TEST_F(ExecutorTest, SimpleUpdateWithPredicateWithoutIndexTest) {
   ASSERT_EQ(result_set.size(), 0);
 }
 
-
-TEST_F(ExecutorTest, SimpleUpdateWithPredicateAndIndexTest) {
+// UPDATE test_1 SET col_a = -1 where col_a > 800; we have an index on col_a
+TEST_F(ExecutorTest, SimpleUpdateWithSetAndIndexTest) {
   // Construct a sequential scan of the table
   const Schema *out_schema{};
   std::unique_ptr<AbstractPlanNode> scan_plan{};
@@ -446,6 +445,14 @@ TEST_F(ExecutorTest, SimpleUpdateWithPredicateAndIndexTest) {
     out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
     scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, predicate, table_info->oid_);
   }
+
+  auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
+  auto key_schema = ParseCreateStatement("a bigint");
+  ComparatorType comparator{key_schema.get()};
+  auto *index_info = GetExecutorContext()->GetCatalog()->CreateIndex<KeyType, ValueType, ComparatorType>(
+      GetTxn(), "index1", "test_1", table_info->schema_, *key_schema, {0}, 8, HashFunctionType{});
+
+  // construct index and insert kv into extendible hash table
 
   // Construct an update plan
   std::unique_ptr<AbstractPlanNode> update_plan{};
@@ -464,10 +471,10 @@ TEST_F(ExecutorTest, SimpleUpdateWithPredicateAndIndexTest) {
   // Verify results
   ASSERT_EQ(result_set.size(), 199);
 
-  
   for (auto i = 0UL; i < 199; ++i) {
     auto &tuple = result_set[i];
-    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(801+i));
+    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(),
+              static_cast<int32_t>(801 + i));
   }
 
   result_set.clear();
@@ -485,135 +492,9 @@ TEST_F(ExecutorTest, SimpleUpdateWithPredicateAndIndexTest) {
   // Verify results after update
   ASSERT_EQ(result_set.size(), 0);
 }
-
-
-// UPDATE test_1 SET col_a = -1 where col_a > 800;
-TEST_F(ExecutorTest, DISABLED_SimpleUpdateWithSelectWithoutIndexTest) {
-  // Construct a sequential scan of the table
-  const Schema *out_schema{};
-  std::unique_ptr<AbstractPlanNode> scan_plan{};
-  {
-    auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-    auto &schema = table_info->schema_;
-    auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
-    auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
-    auto *const800 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(800));
-    auto *predicate = MakeComparisonExpression(col_a, const800, ComparisonType::GreaterThan);
-    out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
-    scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, predicate, table_info->oid_);
-  }
-
-  // Construct an update plan
-  std::unique_ptr<AbstractPlanNode> update_plan{};
-  std::unordered_map<uint32_t, UpdateInfo> update_attrs{};
-  update_attrs.emplace(static_cast<uint32_t>(0), UpdateInfo{UpdateType::Set, -1});
-  {
-    auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-    update_plan = std::make_unique<UpdatePlanNode>(scan_plan.get(), table_info->oid_, update_attrs);
-  }
-
-  std::vector<Tuple> result_set{};
-
-  // Execute an initial sequential scan, ensure all expected tuples are present
-  GetExecutionEngine()->Execute(scan_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // Verify results
-  ASSERT_EQ(result_set.size(), 199);
-
-  
-  for (auto i = 0UL; i < 199; ++i) {
-    auto &tuple = result_set[i];
-    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(801+i));
-  }
-
-  result_set.clear();
-
-  // Execute update for all tuples in the table
-  GetExecutionEngine()->Execute(update_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // UpdateExecutor should not modify the result set
-  ASSERT_EQ(result_set.size(), 0);
-  result_set.clear();
-
-  // Execute another sequential scan; no tuples should be present in the table
-  GetExecutionEngine()->Execute(scan_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // Verify results after update
-  ASSERT_EQ(result_set.size(), 0);
-}
-
-/* 
-  UPDATE 
-    test_1 
-  SET (col_a, col_b) = 
-  (
-    select
-      col_a,col_b
-    from
-      test_3
-    where
-      col_a>800
-  )
-
-*/ 
-TEST_F(ExecutorTest, DISABLED_SimpleUpdateWithSelectWithoutIndexTest) {
-  // Construct a sequential scan of the table
-  const Schema *out_schema{};
-  std::unique_ptr<AbstractPlanNode> scan_plan{};
-  {
-    auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-    auto &schema = table_info->schema_;
-    auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
-    auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
-    auto *const800 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(800));
-    auto *predicate = MakeComparisonExpression(col_a, const800, ComparisonType::GreaterThan);
-    out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
-    scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, predicate, table_info->oid_);
-  }
-
-  // Construct an update plan
-  std::unique_ptr<AbstractPlanNode> update_plan{};
-  std::unordered_map<uint32_t, UpdateInfo> update_attrs{};
-  update_attrs.emplace(static_cast<uint32_t>(0), UpdateInfo{UpdateType::Set, -1});
-  {
-    auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-    update_plan = std::make_unique<UpdatePlanNode>(scan_plan.get(), table_info->oid_, update_attrs);
-  }
-
-  std::vector<Tuple> result_set{};
-
-  // Execute an initial sequential scan, ensure all expected tuples are present
-  GetExecutionEngine()->Execute(scan_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // Verify results
-  ASSERT_EQ(result_set.size(), 199);
-
-  
-  for (auto i = 0UL; i < 199; ++i) {
-    auto &tuple = result_set[i];
-    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(801+i));
-  }
-
-  result_set.clear();
-
-  // Execute update for all tuples in the table
-  GetExecutionEngine()->Execute(update_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // UpdateExecutor should not modify the result set
-  ASSERT_EQ(result_set.size(), 0);
-  result_set.clear();
-
-  // Execute another sequential scan; no tuples should be present in the table
-  GetExecutionEngine()->Execute(scan_plan.get(), &result_set, GetTxn(), GetExecutorContext());
-
-  // Verify results after update
-  ASSERT_EQ(result_set.size(), 0);
-}
-
-
 
 // DELETE FROM test_1 WHERE col_a == 50;
-TEST_F(ExecutorTest, SimpleDeleteTest) {
+TEST_F(ExecutorTest, SimpleDeleteWithIndexUpdateTest) {
   // Construct query plan
   auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
   auto &schema = table_info->schema_;
@@ -651,7 +532,7 @@ TEST_F(ExecutorTest, SimpleDeleteTest) {
 
   // Ensure the key was removed from the index
   std::vector<RID> rids{};
-  //index_info->index_->ScanKey(index_key, &rids, GetTxn());
+  // index_info->index_->ScanKey(index_key, &rids, GetTxn());
   ASSERT_TRUE(rids.empty());
 }
 
@@ -904,17 +785,19 @@ TEST_F(ExecutorTest, SimpleDistinctTest) {
 
   auto *col_c = MakeColumnValueExpression(schema, 0, "colC");
   auto *out_schema = MakeOutputSchema({{"colC", col_c}});
+
   // Construct sequential scan
   auto seq_scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, nullptr, table_info->oid_);
 
   // Construct the distinct plan
   auto distinct_plan = std::make_unique<DistinctPlanNode>(out_schema, seq_scan_plan.get());
+
   // Execute sequential scan with DISTINCT
   std::vector<Tuple> result_set{};
   GetExecutionEngine()->Execute(distinct_plan.get(), &result_set, GetTxn(), GetExecutorContext());
 
   // Verify results; colC is cyclic on 0 - 9
-  ASSERT_EQ(result_set.size(), 100);
+  ASSERT_EQ(result_set.size(), 10);
 
   // Results are unordered
   std::vector<int32_t> results{};

@@ -41,12 +41,12 @@ void HashJoinExecutor::Init() {
   while (right_executor_->Next(&tuple, &rid)) {
     std::vector<Tuple> couples =
         hast_table_->Get(&tuple, const_cast<Schema *>(right_executor_->GetOutputSchema()), expression);
-    if (couples.empty()){
+    if (couples.empty()) {
       continue;
     }
-    for (auto & couple : couples) {
+    for (auto &couple : couples) {
       std::vector<Value> output;
-      for (const auto& col : GetOutputSchema()->GetColumns()) {
+      for (const auto &col : GetOutputSchema()->GetColumns()) {
         output.push_back(col.GetExpr()->EvaluateJoin(&couple, left_executor_->GetOutputSchema(), &tuple,
                                                      right_executor_->GetOutputSchema()));
       }
@@ -56,7 +56,7 @@ void HashJoinExecutor::Init() {
 }
 
 bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
-  if (result_.empty()){
+  if (result_.empty()) {
     return false;
   }
   *tuple = result_.front();

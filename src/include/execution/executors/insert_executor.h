@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -56,11 +57,16 @@ class InsertExecutor : public AbstractExecutor {
   /** @return The output schema for the insert */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
-  void UpdateIndex(IndexInfo *index_info, const Tuple& tuple, RID *rid, Transaction *txn);
-
  private:
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
+
+  /** Iterator to visit raw values */
+  std::vector<std::vector<Value>>::const_iterator iterator_;
+
+  std::unique_ptr<AbstractExecutor> child_executor_;
+
+  TableInfo *table_info_;
 };
 
 }  // namespace bustub

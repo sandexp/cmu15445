@@ -16,24 +16,18 @@ namespace bustub {
 
 DistinctExecutor::DistinctExecutor(ExecutorContext *exec_ctx, const DistinctPlanNode *plan,
                                    std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {
-  this->plan_ = plan;
-  this->child_executor_ =
-      static_cast<std::unique_ptr<AbstractExecutor, std::default_delete<AbstractExecutor>> &&>(child_executor);
-}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)), iterator_(ht_.Begin()) {}
 
 void DistinctExecutor::Init() {
   child_executor_->Init();
-  hash_table_.clear();
   Tuple tuple;
   RID rid;
+  const Schema *output_schema = plan_->OutputSchema();
   while (child_executor_->Next(&tuple, &rid)) {
-    uint64_t hash_code = GetHashCode(tuple, *plan_->OutputSchema());
-    if (hash_table_.find(hash_code) == hash_table_.end()) {
-      hash_table_.insert(hash_code);
-      result_.push_back(tuple);
-    }
+    DistinctKey key = ProductDistinctKey(tuple, output_schema);
+    ht_.Insert(key, tuple);
   }
+  iterator_ = ht_.Begin();
 }
 
 /**
@@ -44,25 +38,21 @@ void DistinctExecutor::Init() {
  * @return whether we need this tuple
  */
 bool DistinctExecutor::Next(Tuple *tuple, RID *rid) {
-  if (result_.empty()){
+  if (iterator_ == ht_.End()) {
     return false;
   }
-  *tuple = result_.front();
-  result_.pop_front();
+  *tuple = iterator_.Val();
+  *rid = tuple->GetRid();
+  ++iterator_;
   return true;
 }
 
-uint64_t DistinctExecutor::GetHashCode(const Tuple& tuple, const Schema& schema) {
-  uint64_t hash_code = 0;
-  uint32_t columns = schema.GetColumnCount();
-  uint32_t base = 1;
-  for (uint32_t i = 0; i < columns; ++i) {
-    Value value = tuple.GetValue(&schema, i);
-    uint32_t base_hash = hash_fn_.GetHash(value.ToString());
-    hash_code += base_hash * base;
-    base *= 2;
+DistinctKey DistinctExecutor::ProductDistinctKey(const Tuple& tuple, const Schema *output_schema) {
+  std::vector<Value> products;
+  for (size_t i = 0; i < output_schema->GetColumnCount(); ++i) {
+    products.emplace_back(tuple.GetValue(output_schema, i));
   }
-  return hash_code;
+  return {products};
 }
 
 }  // namespace bustub

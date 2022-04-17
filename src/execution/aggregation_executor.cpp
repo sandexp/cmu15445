@@ -59,7 +59,7 @@ void AggregationExecutor::Init() {
     if (plan_->GetHaving() == nullptr ||
         plan_->GetHaving()->EvaluateAggregate(agg_key.group_bys_, agg_value.aggregates_).GetAs<bool>()) {
       std::vector<Value> output;
-      for (const auto& col : plan_->OutputSchema()->GetColumns()) {
+      for (const auto &col : plan_->OutputSchema()->GetColumns()) {
         output.push_back(col.GetExpr()->EvaluateAggregate(agg_key.group_bys_, agg_value.aggregates_));
       }
       result_.emplace_back(output, plan_->OutputSchema());
@@ -68,7 +68,7 @@ void AggregationExecutor::Init() {
 }
 
 bool AggregationExecutor::Next(Tuple *tuple, RID *rid) {
-  if (result_.empty()){
+  if (result_.empty()) {
     return false;
   }
   *tuple = result_.front();

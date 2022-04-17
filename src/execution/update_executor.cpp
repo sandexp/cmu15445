@@ -21,31 +21,33 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
   this->plan_ = plan;
   this->child_executor_ =
       static_cast<std::unique_ptr<AbstractExecutor, std::default_delete<AbstractExecutor>> &&>(child_executor);
+  table_oid_t t_id = plan_->TableOid();
+  table_info_ = GetExecutorContext()->GetCatalog()->GetTable(t_id);
+  table_heap_ = table_info_->table_.get();
 }
 
 /**
  * Init Update Operator
  * Just set environment of execution
  */
-void UpdateExecutor::Init() {
-  table_oid_t t_id = plan_->TableOid();
-  table_info_ = GetExecutorContext()->GetCatalog()->GetTable(t_id);
-  child_executor_->Init();
-  assert(table_info_ != nullptr);
-}
+void UpdateExecutor::Init() { child_executor_->Init(); }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   Transaction *txn = GetExecutorContext()->GetTransaction();
-  std::vector<IndexInfo *> indexes = GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_);
+  Schema schema = table_info_->schema_;
+
   while (child_executor_->Next(tuple, rid)) {
     // modify tuple in table
     // update tuple and update index info
-    Tuple updated = GenerateUpdatedTuple(*tuple);
-    table_info_->table_->UpdateTuple(updated, *rid, txn);
+    *tuple = GenerateUpdatedTuple(*tuple);
+    if (!table_heap_->UpdateTuple(*tuple, *rid, txn)) {
+      return false;
+    }
+    // table_info_->table_->UpdateTuple(updated, updated.GetRid(), txn);
     // update index info
-    for (auto & index : indexes) {
-      index->index_->DeleteEntry(*tuple, *rid, txn);
-      index->index_->InsertEntry(updated, updated.GetRid(), txn);
+    for (const auto &index : exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_)) {
+      Tuple insert_tuple = tuple->KeyFromTuple(schema, *index->index_->GetKeySchema(), index->index_->GetKeyAttrs());
+      index->index_->InsertEntry(insert_tuple, *rid, exec_ctx_->GetTransaction());
     }
   }
   return false;

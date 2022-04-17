@@ -265,6 +265,9 @@ class ExtendibleHashTable {
   // Readers includes inserts and removes, writers are splits and merges
   ReaderWriterLatch table_latch_;
   HashFunction<KeyType> hash_fn_;
+
+  // init lock to create dir page
+  std::mutex init_lock_;
 };
 
 }  // namespace bustub

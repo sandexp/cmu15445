@@ -23,23 +23,23 @@ void SeqScanExecutor::Init() {
   TableInfo *info = GetExecutorContext()->GetCatalog()->GetTable(t_id);
 
   assert(info != nullptr && info->table_ != nullptr);
-  assert(plan_->GetType()==PlanType::SeqScan);
+  assert(plan_->GetType() == PlanType::SeqScan);
   // Init table iterator_
   iterator_ = info->table_->Begin(GetExecutorContext()->GetTransaction());
   const AbstractExpression *predicate = plan_->GetPredicate();
   const Schema *schema = &info->schema_;
   Tuple tuple;
-  while (iterator_ != info->table_->End()){
+  while (iterator_ != info->table_->End()) {
     tuple = *iterator_;
     ++iterator_;
-    if(predicate == nullptr || predicate->Evaluate(&tuple, schema).GetAs<bool>()){
+    if (predicate == nullptr || predicate->Evaluate(&tuple, schema).GetAs<bool>()) {
       result_.push_back(tuple);
     }
   }
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
-  if(result_.empty()){
+  if (result_.empty()) {
     return false;
   }
   *tuple = result_.front();
@@ -48,8 +48,6 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   return true;
 }
 
-std::list<Tuple> SeqScanExecutor::GetTemplateTuples() {
-  return result_;
-}
+std::list<Tuple> SeqScanExecutor::GetTemplateTuples() { return result_; }
 
 }  // namespace bustub

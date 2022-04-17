@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <execution/execution_engine.h>
+#include <vector>
 
 #include "execution/executors/insert_executor.h"
 
@@ -20,15 +21,19 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx) {
   this->plan_ = plan;
+  this->child_executor_ = std::move(child_executor);
+  this->table_info_ = GetExecutorContext()->GetCatalog()->GetTable(plan->TableOid());
 }
 
 /**
  * Load ctx into environment
  */
 void InsertExecutor::Init() {
-  table_oid_t t_id = plan_->TableOid();
-  TableInfo *info = GetExecutorContext()->GetCatalog()->GetTable(t_id);
-  assert(info != nullptr);
+  if (plan_->IsRawInsert()) {
+    iterator_ = plan_->RawValues().begin();
+  } else {
+    child_executor_->Init();
+  }
 }
 
 /**
@@ -38,54 +43,30 @@ void InsertExecutor::Init() {
  * @return
  */
 bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-  table_oid_t t_id = plan_->TableOid();
-  TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable(t_id);
-  std::vector<IndexInfo *> index_infos = GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info->name_);
-  Transaction *txn = GetExecutorContext()->GetTransaction();
-  Schema schema = table_info->schema_;
-
-  // step 1: insert into table
+  std::vector<Tuple> tuples;
   if (plan_->IsRawInsert()) {
-    // Raw insert
-    std::vector<std::vector<Value>> values = plan_->RawValues();
-    // translate raw values to tuple
-    for (auto & value : values) {
-      // insert into table
-      Tuple target = Tuple(value, &schema);
-      bool is_success = table_info->table_->InsertTuple(target, rid, txn);
-      if (is_success) {
-        // step 2: update index with extendible hash table
-        for (auto & index_info : index_infos) {
-          UpdateIndex(index_info, target, rid, txn);
-        }
-      }
+    if (iterator_ == plan_->RawValues().end()) {
+      return false;
     }
+    *tuple = Tuple(*iterator_, &table_info_->schema_);
+    iterator_++;
   } else {
-    // plan insert
-    AbstractPlanNode *abs_plan = const_cast<AbstractPlanNode *>(plan_->GetChildAt(0));
-    SeqScanPlanNode *sub_plan = dynamic_cast<SeqScanPlanNode *>(abs_plan);
-
-    SeqScanExecutor sub_executor(exec_ctx_, sub_plan);
-    sub_executor.Init();
-
-    Tuple sub_tuple;
-    RID sub_rid;
-
-    while (sub_executor.Next(&sub_tuple, &sub_rid)) {
-      bool is_success = table_info->table_->InsertTuple(sub_tuple, &sub_rid, txn);
-      if (is_success) {
-        // step 2: update index with extendible hash table
-        for (auto & index_info : index_infos) {
-          UpdateIndex(index_info, sub_tuple, rid, txn);
-        }
-      }
+    if (!child_executor_->Next(tuple, rid)) {
+      return false;
     }
   }
-  return false;
-}
-
-void InsertExecutor::UpdateIndex(IndexInfo *index_info, const Tuple& tuple, RID *rid, Transaction *txn) {
-  index_info->index_->InsertEntry(tuple, *rid, txn);
+  // insert into table heap
+  if (!table_info_->table_->InsertTuple(*tuple, rid, GetExecutorContext()->GetTransaction())) {
+    return false;
+  }
+  // insert into index
+  Transaction *txn = GetExecutorContext()->GetTransaction();
+  for (const auto &index : GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_)) {
+    Tuple key_tuple =
+        tuple->KeyFromTuple(table_info_->schema_, *index->index_->GetKeySchema(), index->index_->GetKeyAttrs());
+    index->index_->InsertEntry(key_tuple, *rid, txn);
+  }
+  return Next(tuple, rid);
 }
 
 }  // namespace bustub

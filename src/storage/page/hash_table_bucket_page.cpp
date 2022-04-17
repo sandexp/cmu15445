@@ -38,6 +38,8 @@ bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator 
     if (cmp(array_[i].first, key) == 0 && array_[i].second == value && IsReadable(i)) {
       return false;
     }
+  }
+  for (size_t i = 0; i < BUCKET_ARRAY_SIZE; ++i) {
     if (!IsReadable(i)) {
       // only insert when this bucket is empty, if all buckets is filled, return false
       MappingType pair = std::pair<KeyType, ValueType>(key, value);

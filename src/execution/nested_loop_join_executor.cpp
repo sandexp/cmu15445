@@ -26,10 +26,11 @@ NestedLoopJoinExecutor::NestedLoopJoinExecutor(ExecutorContext *exec_ctx, const 
       static_cast<std::unique_ptr<AbstractExecutor, std::default_delete<AbstractExecutor>> &&>(right_executor);
 }
 
-// Load Left table when init executor
+// Load Left table when init executor, use rid to optimize io cost
 void NestedLoopJoinExecutor::Init() {
   left_executor_->Init();
   right_executor_->Init();
+
   Tuple tuple;
   RID rid;
   while (left_executor_->Next(&tuple, &rid)) {
@@ -38,14 +39,14 @@ void NestedLoopJoinExecutor::Init() {
 
   while (right_executor_->Next(&tuple, &rid)) {
     // nest join with cache
-    for (auto & cache : caches_) {
+    for (auto &cache : caches_) {
       bool predicate =
           plan_->Predicate()
               ->EvaluateJoin(&cache, left_executor_->GetOutputSchema(), &tuple, right_executor_->GetOutputSchema())
               .GetAs<bool>();
       if (predicate) {
         std::vector<Value> output;
-        for (const auto& col : GetOutputSchema()->GetColumns()) {
+        for (const auto &col : GetOutputSchema()->GetColumns()) {
           output.push_back(col.GetExpr()->EvaluateJoin(&cache, left_executor_->GetOutputSchema(), &tuple,
                                                        right_executor_->GetOutputSchema()));
         }
